@@ -17,13 +17,6 @@ def parse_args():
     parser.add_argument(
         "--spatial_dimension", default=3, type=int, help="Dimension of images: 2d or 3d."
     )
-    parser.add_argument("--image_size", default=None, help="Resize images.")
-    parser.add_argument(
-        "--image_roi",
-        default=None,
-        help="Specify central ROI crop of inputs, as a tuple, with -1 to not crop a dimension.",
-        type=ast.literal_eval,
-    )
     parser.add_argument(
         "--resolution_invariant",
         default=0,
@@ -38,15 +31,14 @@ def parse_args():
     parser.add_argument("--kl_weight", default=0.00001, type=float)
     parser.add_argument("--adversarial_weight", default=1, type=float, help="weight for adversarial loss")
 
-    parser.add_argument("--num_channels", default=(16, 32, 64, 128, 256), type=ast.literal_eval)
+    parser.add_argument("--num_channels", default=(32, 64, 128, 256), type=ast.literal_eval)
     parser.add_argument(
         "--num_res_blocks", default=2, type=ast.literal_eval
     )
-    parser.add_argument("--latent_channels", default=16, type=int)
+    parser.add_argument("--latent_channels", default=8, type=int)
 
-    parser.add_argument("--norm_num_groups", default=16, type=float)
-    parser.add_argument("--attention_levels", default=(False, False, False, False, False), type=Sequence[bool])
-    # parser.add_argument("--ae_ddp_sync", default=True, type=bool)
+    parser.add_argument("--norm_num_groups", default=8, type=float)
+    parser.add_argument("--attention_levels", default=(False, False, False, False), type=Sequence[bool])
 
     # training param
     parser.add_argument("--batch_size", type=int, default=2, help="Training batch size.")
@@ -67,7 +59,7 @@ def parse_args():
         "--geometric_augmentations",
         type=int,
         default=1,
-        help="Whether to apply cropping and resizing augmentations"
+        help="Whether to apply cropping augmentations"
     )
     parser.add_argument(
         "--adversarial_warmup",
@@ -97,39 +89,15 @@ def parse_args():
     )
     parser.add_argument(
         "--trainer_type",
-        default="consistent",
+        default="normal",
         type=str,
         help="Train with resolution consist16ency, normal or latent decomposition"
-    )
-    parser.add_argument(
-        "--min_starting_latent_channels",
-        default=2,
-        type=int,
-        help="Only required for Latent Decomposition training, states the starting number of latent channels to use for encoding at the lowest resolution"
-    )
-    parser.add_argument(
-        "--max_resolution_multiplier",
-        default=5,
-        type=int,
-        help="Max scale difference between the lowest and highest resolution (used to calculate number of channels to be using in latent)"
-    )
-    parser.add_argument(
-        "--partialhypertype",
-        default="regular",
-        type=str,
-        help="regular or small - amount of hyper network in the AE"
     )
     parser.add_argument(
         "--klwarmup",
         default=1,
         type=int,
         help="bool 0 if false 1 if true"
-    )
-    parser.add_argument(
-        "--zero_latent_loss_only",
-        default=0,
-        type=int,
-        help="bool 0 if false 1 if true to only use loss to zero latents not to equate Low res and High res latents"
     )
     parser.add_argument(
         "--latent_loss_weight",
@@ -150,18 +118,10 @@ def parse_args():
 # to run using DDP, run torchrun --nproc_per_node=1 --nnodes=1 --node_rank=0  train_ddpm.py --args
 if __name__ == "__main__":
     args = parse_args()
-    if args.trainer_type == "consistent":
-        trainer = AEKLTrainerConsistent(args)
-    elif args.trainer_type == "normal":
+
+    if args.trainer_type == "normal":
         trainer = AEKLTrainer(args)
-    elif args.trainer_type == "hyper":
-        trainer = AEKLTrainerHyper(args)
-    elif args.trainer_type == "hyperpartial":
-        trainer = AEKLTrainerHyperLD(args)
-    elif args.trainer_type == "forced_decomp":
-        trainer = AEKLTrainerLatentDecompForced(args)
-    elif "specific_noise" in args.trainer_type:
-        trainer = AEKLTrainerLatentDecompSpecificNoise(args)
     else:
-        trainer = AEKLTrainerLD(args)
+        trainer = AEKLTrainerLatentDecompSpecificNoise(args)
+
     trainer.train(args)

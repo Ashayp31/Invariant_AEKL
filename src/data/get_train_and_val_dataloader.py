@@ -63,31 +63,22 @@ class FixedResizeImg(MapTransform):
         d = dict(data)
         img = d["image"]
         d["dimension"] = [img.shape[1], img.shape[2], img.shape[3]]
-        resolution_change = 1.2
         x_len = img.shape[1]
         y_len = img.shape[2]
         z_len = img.shape[3]
-        new_x_len = int(8 * ((x_len / resolution_change) // 8))
-        new_y_len = int(8 * ((y_len / resolution_change) // 8))
-        new_z_len = int(8 * ((z_len / resolution_change) // 8))
 
         resolution_change_lr = 2.6
         new_x_len_lr = int(8 * ((x_len / resolution_change_lr) // 8))
         new_y_len_lr = int(8 * ((y_len / resolution_change_lr) // 8))
         new_z_len_lr = int(8 * ((z_len / resolution_change_lr) // 8))
 
-
-        resize_transform = Resize(spatial_size=[new_x_len, new_y_len, new_z_len], mode="area")
-        resolution_change = x_len / new_x_len
-        img_hr = resize_transform(img)
-
         resize_transform_lr = Resize(spatial_size=[new_x_len_lr, new_y_len_lr, new_z_len_lr], mode="area")
         resolution_change_lr = x_len / new_x_len_lr
         img_lr = resize_transform_lr(img)
 
-        d["image"] = img_hr
-        d["dimension"] = [img_hr.shape[1], img_hr.shape[2], img_hr.shape[3]]
-        d["resolution"] = [resolution_change]
+        d["image"] = img
+        d["dimension"] = [img.shape[1], img.shape[2], img.shape[3]]
+        d["resolution"] = [1]
 
         d["image_low_res"] = img_lr
         d["dimension_low_res"] = [img_lr.shape[1], img_lr.shape[2], img_lr.shape[3]]
@@ -260,24 +251,10 @@ def get_training_data_loader(
     num_val_workers: int = 3,
     cache_data=True,
     first_n=None,
-    is_grayscale=False,
-    add_vflip=False,
-    add_hflip=False,
-    image_size=None,
-    image_roi=None,
-    spatial_dimension=2,
-    has_coordconv=True,
     apply_geometric_aug=False,
     normalise_intensity=False,
 ):
 
-    resize_transform = (
-        transforms.Resized(keys=["image"], spatial_size=(136,120,120))
-    )
-
-    val_resize_transform = (
-        transforms.Resized(keys=["image"], spatial_size=(160,144,144))
-    )
     normalise_intensity_transform = (transforms.NormalizeIntensityd(keys=["image", "image_low_res"]))
 
     train_transforms = transforms.Compose(
@@ -295,8 +272,7 @@ def get_training_data_loader(
                 scale_range=[0.05, 0.05, 0],
                 padding_mode='zeros'
             ),
-            RandResizeImg(keys=["image"]) if apply_geometric_aug else lambda x: x,
-            resize_transform if not apply_geometric_aug else lambda x: x,
+            RandResizeImg(keys=["image"]),
             transforms.SignalFillEmptyd(keys=["image", "image_low_res"]),
             normalise_intensity_transform if normalise_intensity else lambda x: x,
             transforms.ThresholdIntensityd(keys=["image", "image_low_res"], threshold=1, above=False, cval=1.0) if not normalise_intensity else lambda x: x,

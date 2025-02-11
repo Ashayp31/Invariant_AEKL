@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.distributed as dist
 
-from src.networks import Resolution_Invariant_AE
+from src.networks import AutoencoderKLResolutionInvariant
 
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.tensorboard import SummaryWriter
@@ -18,7 +18,7 @@ from src.data.invariant_validation_dataloader import get_invariant_validation_lo
 import nibabel as nib
 import gc
 
-class AEKLDecompInferer:
+class AEKLSuperresInferer:
     def __init__(self, args):
 
         # initialise DDP if run was launched with torchrun
@@ -92,7 +92,7 @@ class AEKLDecompInferer:
         }
 
 
-        self.model = Resolution_Invariant_AE(spatial_dims=args.spatial_dimension,
+        self.model = AutoencoderKLResolutionInvariant(spatial_dims=args.spatial_dimension,
                                          in_channels=args.in_channels,
                                          out_channels=args.out_channels,
                                          num_channels=args.num_channels,

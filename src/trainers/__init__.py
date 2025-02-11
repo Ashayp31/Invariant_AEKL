@@ -1,4 +1,4 @@
 from .ae_kl_trainer import AEKLTrainer
-from .ae_latent_decomposition_inference import AEKLDecompInferer
+from .ae_superres_inference import AEKLSuperresInferer
 from .ae_kl_trainer_specific_noise import AEKLTrainerLatentDecompSpecificNoise
 from .ae_error_and_uncertainty_inference import AEKLUncertaintyInferer

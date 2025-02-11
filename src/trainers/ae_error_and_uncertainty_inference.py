@@ -8,7 +8,7 @@ import numpy as np
 import torch
 import torch.distributed as dist
 
-from src.networks import Resolution_Invariant_AE
+from src.networks import AutoencoderKLResolutionInvariant
 
 from torch.nn.parallel import DistributedDataParallel
 from torch.utils.tensorboard import SummaryWriter
@@ -88,7 +88,7 @@ class AEKLUncertaintyInferer:
 
         }
 
-        self.model = Resolution_Invariant_AE(spatial_dims=args.spatial_dimension,
+        self.model = AutoencoderKLResolutionInvariant(spatial_dims=args.spatial_dimension,
                                          in_channels=args.in_channels,
                                          out_channels=args.out_channels,
                                          num_channels=args.num_channels,

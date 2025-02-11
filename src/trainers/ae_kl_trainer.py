@@ -10,8 +10,7 @@ import torch.distributed as dist
 from generative.losses.adversarial_loss import PatchAdversarialLoss
 from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import PatchDiscriminator
-from src_vq.networks.autoencoders.AE_KL import AutoencoderKL
-from src.networks.AE_KL_invariant import AutoencoderKLInvariant
+from src.networks import AutoencoderKL
 from monai.networks.layers import Act
 from torch.nn import L1Loss
 
@@ -170,10 +169,6 @@ class AEKLTrainer:
             validation_ids=args.validation_ids,
             num_workers=args.num_workers,
             cache_data=bool(args.cache_data),
-            is_grayscale=bool(args.is_grayscale),
-            spatial_dimension=args.spatial_dimension,
-            image_size=int(args.image_size) if args.image_size else args.image_size,
-            image_roi=args.image_roi,
             apply_geometric_aug=bool(args.geometric_augmentations),
             normalise_intensity=bool(args.normalise_intensity)
         )

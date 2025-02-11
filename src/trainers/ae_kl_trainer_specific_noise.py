@@ -12,7 +12,7 @@ from generative.losses.adversarial_loss import PatchAdversarialLoss
 from generative.losses.perceptual import PerceptualLoss
 from generative.networks.nets import PatchDiscriminator
 
-from src.networks import Resolution_Invariant_AE
+from src.networks import AutoencoderKLResolutionInvariant
 
 from monai.networks.layers import Act
 from torch.nn import L1Loss
@@ -95,7 +95,7 @@ class AEKLTrainerLatentDecompSpecificNoise:
 
         }
 
-        self.model = Resolution_Invariant_AE(spatial_dims=args.spatial_dimension,
+        self.model = AutoencoderKLResolutionInvariant(spatial_dims=args.spatial_dimension,
                                          in_channels=args.in_channels,
                                          out_channels=args.out_channels,
                                          num_channels=args.num_channels,
@@ -195,8 +195,6 @@ class AEKLTrainerLatentDecompSpecificNoise:
             cache_data=bool(args.cache_data),
             is_grayscale=bool(args.is_grayscale),
             spatial_dimension=args.spatial_dimension,
-            image_size=int(args.image_size) if args.image_size else args.image_size,
-            image_roi=args.image_roi,
             apply_geometric_aug=bool(args.geometric_augmentations),
             normalise_intensity=bool(args.normalise_intensity)
         )
