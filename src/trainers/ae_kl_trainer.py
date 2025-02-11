@@ -49,7 +49,7 @@ class AEKLTrainer:
             print(f"  {k}: {v}")
 
 
-        self.resolution_invariant = args.resolution_invariant == 1
+        self.resolution_invariant = bool(args.resolution_invariant)
 
         # set up model
         self.spatial_dimension = args.spatial_dimension
@@ -116,8 +116,6 @@ class AEKLTrainer:
         self.recon_weight = 5
         self.kl_weight = 0.000001
 
-
-
         self.adversarial_warmup = bool(args.adversarial_warmup)
         # set up optimizer, loss, checkpoints
         self.run_dir = Path(args.output_dir) / args.model_name
@@ -140,9 +138,10 @@ class AEKLTrainer:
         self.run_dir.mkdir(exist_ok=True)
         with open(self.run_dir / "ae_kl_config.json", "w") as f:
             json.dump(ae_args, f, indent=4)
-        self.optimizer = torch.optim.Adam(params=self.model.parameters(), lr=0.00001)
+
         if checkpoint_path.exists():
-            self.optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+            self.optimizer_d.load_state_dict(checkpoint["optimizer_d_state_dict"])
+            self.optimizer_g.load_state_dict(checkpoint["optimizer_g_state_dict"])
 
         # wrap the model with DistributedDataParallel module
         if self.ddp:
@@ -175,17 +174,19 @@ class AEKLTrainer:
             spatial_dimension=args.spatial_dimension,
             image_size=int(args.image_size) if args.image_size else args.image_size,
             image_roi=args.image_roi,
-            apply_geometric_aug=bool(args.geometric_augmentations)
+            apply_geometric_aug=bool(args.geometric_augmentations),
+            normalise_intensity=bool(args.normalise_intensity)
         )
 
-    def save_checkpoint(self, path, epoch, save_message=None):
+    def save_checkpoint(self, path, epoch, save_message=None, save_every=None):
         if self.ddp and dist.get_rank() == 0:
             # if DDP save a state dict that can be loaded by non-parallel models
             checkpoint = {
                 "epoch": epoch + 1,  # save epoch+1, so we resume on the next epoch
                 "global_step": self.global_step,
                 "model_state_dict": self.model.module.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
+                "optimizer_g_state_dict": self.optimizer_g.state_dict(),
+                "optimizer_d_state_dict": self.optimizer_d.state_dict(),
                 "best_loss": self.best_loss,
             }
             print(save_message)
@@ -195,11 +196,13 @@ class AEKLTrainer:
                 "epoch": epoch + 1,  # save epoch+1, so we resume on the next epoch
                 "global_step": self.global_step,
                 "model_state_dict": self.model.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
+                "optimizer_g_state_dict": self.optimizer_g.state_dict(),
+                "optimizer_d_state_dict": self.optimizer_d.state_dict(),
                 "best_loss": self.best_loss,
             }
             print(save_message)
             torch.save(checkpoint, path)
+
 
     def train(self, args):
 
@@ -220,6 +223,7 @@ class AEKLTrainer:
                     self.run_dir / f"checkpoint_{epoch+1}.pth",
                     epoch,
                     save_message=f"Saving checkpoint at epoch {epoch+1}",
+                    save_every=args.checkpoint_every
                 )
 
             if (epoch + 1) % args.eval_freq == 0:
@@ -265,7 +269,7 @@ class AEKLTrainer:
             self.optimizer_g.zero_grad(set_to_none=True)
 
             # Generator part
-            reconstruction, z_mu, z_sigma = self.model(images, intermediate_spatial_dimensions)
+            reconstruction, z_mu, z_sigma = self.model(images, intermediate_spatial_dimensions, intermediate_spatial_dimensions)
 
             logits_fake = self.discriminator(reconstruction.contiguous().float())[-1]
 
@@ -378,7 +382,7 @@ class AEKLTrainer:
                 else:
                     intermediate_spatial_dimensions = None
 
-                reconstruction, z_mu, z_sigma = self.model(images, intermediate_spatial_dimensions)
+                reconstruction, z_mu, z_sigma = self.model(images, intermediate_spatial_dimensions, intermediate_spatial_dimensions)
                 logits_fake = self.discriminator(reconstruction.contiguous().float())[-1]
 
                 recons_loss = self.l1_loss(reconstruction.float(), images.float())

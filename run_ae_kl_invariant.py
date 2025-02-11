@@ -2,8 +2,8 @@ import argparse
 import ast
 from typing import Tuple, Union, Sequence
 
-from src.trainers import (AEKLTrainer, AEKLTrainerLatentDecompSpecificNoise,
-                          )
+from src.trainers import AEKLDecompInferer, AEKLUncertaintyInferer
+
 
 
 def parse_args():
@@ -14,6 +14,7 @@ def parse_args():
     parser.add_argument("--model_name", help="Name of model.")
     parser.add_argument("--training_ids", help="Location of file with training ids.")
     parser.add_argument("--validation_ids", help="Location of file with validation ids.")
+    parser.add_argument("--model_checkpoint", type=str, help="Location of model checkpoint")
     parser.add_argument(
         "--spatial_dimension", default=3, type=int, help="Dimension of images: 2d or 3d."
     )
@@ -34,23 +35,22 @@ def parse_args():
     # model params
     parser.add_argument("--in_channels", default=1, type=int)
     parser.add_argument("--out_channels", default=1, type=int)
-    parser.add_argument("--learning_rate", default=0.0001, type=float)
-    parser.add_argument("--kl_weight", default=0.00001, type=float)
-    parser.add_argument("--adversarial_weight", default=1, type=float, help="weight for adversarial loss")
 
-    parser.add_argument("--num_channels", default=(16, 32, 64, 128, 256), type=ast.literal_eval)
+    # parser.add_argument("--num_channels", default=(16, 32, 64, 128, 256), type=ast.literal_eval)
+    parser.add_argument("--num_channels", default=(32, 64, 128, 256), type=ast.literal_eval)
     parser.add_argument(
         "--num_res_blocks", default=2, type=ast.literal_eval
     )
     parser.add_argument("--latent_channels", default=16, type=int)
 
     parser.add_argument("--norm_num_groups", default=16, type=float)
-    parser.add_argument("--attention_levels", default=(False, False, False, False, False), type=Sequence[bool])
+    parser.add_argument("--attention_levels", default=(False, False, False, False), type=Sequence[bool])
+    # parser.add_argument("--attention_levels", default=(False, False, False, False, False), type=Sequence[bool])
     # parser.add_argument("--ae_ddp_sync", default=True, type=bool)
 
     # training param
     parser.add_argument("--batch_size", type=int, default=2, help="Training batch size.")
-    parser.add_argument("--n_epochs", type=int, default=600, help="Number of epochs to train.")
+    parser.add_argument("--n_epochs", type=int, default=1000, help="Number of epochs to train.")
     parser.add_argument(
         "--eval_freq",
         type=int,
@@ -66,13 +66,13 @@ def parse_args():
     parser.add_argument(
         "--geometric_augmentations",
         type=int,
-        default=1,
+        default=0,
         help="Whether to apply cropping and resizing augmentations"
     )
     parser.add_argument(
         "--adversarial_warmup",
         type=int,
-        default=1,
+        default=20,
         help="Warmup the learning rate of the adversarial component.",
     )
     parser.add_argument("--num_workers", type=int, default=8, help="Number of loader workers")
@@ -85,7 +85,7 @@ def parse_args():
     parser.add_argument(
         "--checkpoint_every",
         type=int,
-        default=200,
+        default=50,
         help="Save a checkpoint every checkpoint_every epochs.",
     )
     parser.add_argument("--is_grayscale", type=int, default=0, help="Is data grayscale.")
@@ -96,10 +96,18 @@ def parse_args():
         help="If True, runs through a single batch of the train and eval loop.",
     )
     parser.add_argument(
+        "--inference_type",
+        default="normal",
+        type=str,
+        help="If decomp runs through varying resolutions and saves original resolution recons and low res to high res recons"
+             "as well as saving latents, normal mode runs just one high res and one low res recon",
+
+    )
+    parser.add_argument(
         "--trainer_type",
         default="consistent",
         type=str,
-        help="Train with resolution consist16ency, normal or latent decomposition"
+        help="Train with resolution consistency, normal or latent decomposition"
     )
     parser.add_argument(
         "--min_starting_latent_channels",
@@ -119,30 +127,6 @@ def parse_args():
         type=str,
         help="regular or small - amount of hyper network in the AE"
     )
-    parser.add_argument(
-        "--klwarmup",
-        default=1,
-        type=int,
-        help="bool 0 if false 1 if true"
-    )
-    parser.add_argument(
-        "--zero_latent_loss_only",
-        default=0,
-        type=int,
-        help="bool 0 if false 1 if true to only use loss to zero latents not to equate Low res and High res latents"
-    )
-    parser.add_argument(
-        "--latent_loss_weight",
-        default=0.25,
-        type=float,
-        help="weighting of latent loss value"
-    )
-    parser.add_argument(
-        "--normalise_intensity",
-        default=0,
-        type=int,
-        help="whether to z norm inputs"
-    )
     args = parser.parse_args()
     return args
 
@@ -150,18 +134,12 @@ def parse_args():
 # to run using DDP, run torchrun --nproc_per_node=1 --nnodes=1 --node_rank=0  train_ddpm.py --args
 if __name__ == "__main__":
     args = parse_args()
-    if args.trainer_type == "consistent":
-        trainer = AEKLTrainerConsistent(args)
-    elif args.trainer_type == "normal":
-        trainer = AEKLTrainer(args)
-    elif args.trainer_type == "hyper":
-        trainer = AEKLTrainerHyper(args)
-    elif args.trainer_type == "hyperpartial":
-        trainer = AEKLTrainerHyperLD(args)
-    elif args.trainer_type == "forced_decomp":
-        trainer = AEKLTrainerLatentDecompForced(args)
-    elif "specific_noise" in args.trainer_type:
-        trainer = AEKLTrainerLatentDecompSpecificNoise(args)
+    if args.inference_type == "decomp":
+        inferer = AEKLDecompInferer(args)
+    elif args.inference_type == "uncertainty":
+        inferer = AEKLUncertaintyInferer(args)
+    elif args.inference_type == "noise_inf":
+        inferer = AEKLNoiseInferer(args)
     else:
-        trainer = AEKLTrainerLD(args)
-    trainer.train(args)
+        inferer = AEKLInferer(args)
+    inferer.infer()

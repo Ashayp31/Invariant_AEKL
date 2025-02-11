@@ -1,1 +1,2 @@
-from .passthrough_vqvae import PassthroughVQVAE
+from .Resolution_Invariant_AE import AutoencoderKLResolutionInvariant
+from. AE_KL import AutoencoderKL
