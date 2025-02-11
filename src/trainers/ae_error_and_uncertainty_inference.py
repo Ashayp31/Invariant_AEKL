@@ -110,9 +110,7 @@ class AEKLUncertaintyInferer:
 
         self.val_loader = get_invariant_validation_loader(
             batch_size=args.batch_size,
-            training_ids=args.training_ids,
             validation_ids=args.validation_ids,
-            num_workers=args.num_workers,
             cache_data=bool(args.cache_data),
         )
 

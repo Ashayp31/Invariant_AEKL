@@ -64,24 +64,15 @@ class AEKLTrainer:
 
         }
 
-        if self.resolution_invariant:
-            self.model = AutoencoderKLInvariant(spatial_dims=args.spatial_dimension,
-                                        in_channels=args.in_channels,
-                                        out_channels=args.out_channels,
-                                        num_channels=args.num_channels,
-                                        latent_channels=args.latent_channels,
-                                        num_res_blocks=args.num_res_blocks,
-                                        norm_num_groups=args.norm_num_groups,
-                                        attention_levels=args.attention_levels)
-        else:
-            self.model = AutoencoderKL(spatial_dims=args.spatial_dimension,
-                                        in_channels=args.in_channels,
-                                        out_channels=args.out_channels,
-                                        num_channels=args.num_channels,
-                                        latent_channels=args.latent_channels,
-                                        num_res_blocks=args.num_res_blocks,
-                                        norm_num_groups=args.norm_num_groups,
-                                        attention_levels=args.attention_levels)
+
+        self.model = AutoencoderKL(spatial_dims=args.spatial_dimension,
+                                    in_channels=args.in_channels,
+                                    out_channels=args.out_channels,
+                                    num_channels=args.num_channels,
+                                    latent_channels=args.latent_channels,
+                                    num_res_blocks=args.num_res_blocks,
+                                    norm_num_groups=args.norm_num_groups,
+                                    attention_levels=args.attention_levels)
         self.model.to(self.device)
         print(f"{sum(p.numel() for p in self.model.parameters()):,} model parameters")
 
@@ -245,26 +236,10 @@ class AEKLTrainer:
         for step, batch in progress_bar:
             images = batch["image"].to(self.device)
 
-            # Current latent of highest resolution is at 272 x 272 x 288
-            # 3 Layers of downsampling gives a latent at 34 * 34 * 36`
-
-
-            if self.resolution_invariant:
-                resolution = batch["resolution"][0].detach().numpy()
-                res_change = (8/resolution[0])**(1/3)
-                image_dimensions = images.shape[2:]
-                intermediate_spatial_dimensions = [[int(image_dimensions[i]) for i in range(self.spatial_dimension)],
-                                                    [int(image_dimensions[i]/res_change) for i in range(self.spatial_dimension)],
-                                                   [int(image_dimensions[i] / (res_change**2)) for i in range(self.spatial_dimension)],
-                                                [int(image_dimensions[i] / (res_change**3)) for i in range(self.spatial_dimension)]]
-
-            else:
-                intermediate_spatial_dimensions = None
-
             self.optimizer_g.zero_grad(set_to_none=True)
 
             # Generator part
-            reconstruction, z_mu, z_sigma = self.model(images, intermediate_spatial_dimensions, intermediate_spatial_dimensions)
+            reconstruction, z_mu, z_sigma = self.model(images)
 
             logits_fake = self.discriminator(reconstruction.contiguous().float())[-1]
 
@@ -365,19 +340,7 @@ class AEKLTrainer:
             for step, batch in progress_bar:
                 images = batch["image"].to(self.device)
 
-                if self.resolution_invariant:
-                    resolution = batch["resolution"][0].detach().numpy()
-                    res_change = (8 / resolution[0]) ** (1 / 3)
-                    image_dimensions = images.shape[2:]
-                    intermediate_spatial_dimensions = [
-                        [int(image_dimensions[i]) for i in range(self.spatial_dimension)],
-                        [int(image_dimensions[i] / res_change) for i in range(self.spatial_dimension)],
-                        [int(image_dimensions[i] / (res_change ** 2)) for i in range(self.spatial_dimension)],
-                        [int(image_dimensions[i] / (res_change ** 3)) for i in range(self.spatial_dimension)]]
-                else:
-                    intermediate_spatial_dimensions = None
-
-                reconstruction, z_mu, z_sigma = self.model(images, intermediate_spatial_dimensions, intermediate_spatial_dimensions)
+                reconstruction, z_mu, z_sigma = self.model(images)
                 logits_fake = self.discriminator(reconstruction.contiguous().float())[-1]
 
                 recons_loss = self.l1_loss(reconstruction.float(), images.float())

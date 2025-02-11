@@ -91,7 +91,7 @@ def parse_args():
         "--trainer_type",
         default="normal",
         type=str,
-        help="Train with resolution consist16ency, normal or latent decomposition"
+        help="Train a normal AE or or AE Resolution Invariant"
     )
     parser.add_argument(
         "--klwarmup",

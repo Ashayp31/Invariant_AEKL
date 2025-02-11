@@ -773,7 +773,7 @@ class AutoencoderKL(nn.Module):
             dec = self.decoder(z)
         return dec
 
-    def forward(self, x: torch.Tensor, intermediate_spatial_dimensions_enc:list=None, intermediate_spatial_dimensions_dec:list=None) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    def forward(self, x: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         z_mu, z_sigma = self.encode(x)
         z = self.sampling(z_mu, z_sigma)
         reconstruction = self.decode(z)

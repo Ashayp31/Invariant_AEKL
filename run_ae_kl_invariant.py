@@ -52,14 +52,7 @@ def parse_args():
         "--inference_type",
         default="superres",
         type=str,
-        help="If decomp runs through varying resolutions and saves original resolution recons and low res to high res recons"
-             "as well as saving latents, normal mode runs just one high res and one low res recon",
-    )
-    parser.add_argument(
-        "--trainer_type",
-        default="normal",
-        type=str,
-        help="Train with resolution consistency, normal or latent decomposition"
+        help="Run superres or superres with uncertainty",
     )
     args = parser.parse_args()
     return args

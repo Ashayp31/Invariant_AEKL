@@ -116,12 +116,8 @@ def get_data_dicts(ids_path: str, shuffle: bool = False, first_n=False):
 
 def get_invariant_validation_loader(
     batch_size: int,
-    training_ids: str,
     validation_ids: str,
-    only_val: bool = False,
-    augmentation: bool = True,
     drop_last: bool = False,
-    num_workers: int = 8,
     num_val_workers: int = 3,
     cache_data=True,
     first_n=None,

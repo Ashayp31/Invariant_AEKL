@@ -73,8 +73,6 @@ class AEKLSuperresInferer:
 
         self.resolution_invariant = args.resolution_invariant == 1
 
-
-        self.network_type = args.trainer_type
         self.num_layers = len(args.num_channels) - 1
 
         # set up model
@@ -114,9 +112,7 @@ class AEKLSuperresInferer:
 
         self.val_loader = get_invariant_validation_loader(
             batch_size=args.batch_size,
-            training_ids=args.training_ids,
             validation_ids=args.validation_ids,
-            num_workers=args.num_workers,
             cache_data=bool(args.cache_data),
         )
 
