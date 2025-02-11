@@ -11,5 +11,4 @@ CUDA_LAUNCH_BLOCKING=1 python3 /nfs/home/apatel/resolution_invariant_AE/run_ae_k
     --batch_size=1 \
     --geometric_augmentations=1 \
     --inference_type=uncertainty \
-    --trainer_type=specific_noise_forced_decomp_v2 \
     --latent_channels=8
